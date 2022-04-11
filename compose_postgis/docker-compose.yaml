@@ -1,0 +1,33 @@
+version: '3.6'
+
+services:
+    postgis:
+        image: postgis/postgis:14-3.2-alpine
+        container_name: postgis
+        environment:
+            POSTGRES_USER: admin
+            POSTGRES_PASSWORD: admin
+            POSTGRES_DB: mydb
+        restart: always
+        volumes:
+            - ~/.development/postgresql/mydb:/var/lib/postgresql/data
+            - <local path to init.sql>:/docker-entrypoint-initdb.d
+        ports:
+            - 8000:5432
+        networks:
+            - postgresql_network
+    
+    pgadmin:
+        image: dpage/pgadmin4
+        container_name: pgadmin
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=admin@admin.es
+            - PGADMIN_DEFAULT_PASSWORD=admin
+        ports:
+            - 8001:80
+        networks:
+            - postgresql_network
+    
+networks:
+    postgresql_network:
+        driver: bridge
