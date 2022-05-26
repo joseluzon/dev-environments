@@ -16,8 +16,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \28
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
+# Base 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends build-essential git curl ca-certificates wget
+    && apt-get -y install --no-install-recommends build-essential curl ca-certificates wget git
+
+# Net Tools
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends net-tools iputils-ping
 
 # Zulu JDK-JFX:
 RUN wget ${ZULU_JDK_JFX} -P /tmp && ls -l /tmp/zulu* && \
@@ -36,6 +41,6 @@ ENV M2_HOME /opt/maven
 ENV MAVEN_HOME /opt/maven
 ENV PATH $MAVEN_HOME:$MAVEN_HOME/bin:$PATH
 
-# X11 libs:
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends libx11-dev libxext-dev libxrender-dev libxtst-dev
+# X11
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends x11-apps

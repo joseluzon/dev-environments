@@ -10,22 +10,35 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-# X11 libs:
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#    && apt-get -y install --no-install-recommends libx11-dev libxext-dev libxrender-dev libxtst-dev
-
-# build essentials:
+# Base 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends build-essential cmake cppcheck valgrind clang clang-format clang-tidy lldb llvm libasan6 doxygen git gdb libboost-dev
+    && apt-get -y install --no-install-recommends build-essential curl ca-certificates wget git
 
-# Conan C/C++ Package Manager: https://conan.io/
+# Net Tools
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends net-tools iputils-ping
+
+# C++ tools
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends cmake gdb cppcheck clang clang-format clang-tidy lldb llvm libasan6 valgrind doxygen libboost-dev
+
+# Python 3
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends python3 python3-pip
 
-RUN pip3 install conan
-
 # cpplint
 RUN pip3 install cpplint
+
+# Conan
+RUN pip3 install conan
+
+# Qt5
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends qt5-default libqt5opengl*
+
+# X11
+# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+#     && apt-get -y install --no-install-recommends x11-apps
 
 # OpenGL for IMGUI
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \

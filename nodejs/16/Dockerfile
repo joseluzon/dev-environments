@@ -13,8 +13,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \28
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
+# Base 
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends build-essential git curl ca-certificates wget
+    && apt-get -y install --no-install-recommends build-essential curl ca-certificates wget git
+
+# Net Tools
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends net-tools iputils-ping
 
 # Node.js:
 RUN wget ${NODEJS_PACKAGE} -P /tmp && ls -l /tmp/node* && \
