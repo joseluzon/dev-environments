@@ -32,13 +32,9 @@ RUN pip3 install cpplint
 # Conan
 RUN pip3 install conan
 
-# Qt5
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends qt5-default libqt5opengl*
-
 # X11
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends x11-apps
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends x11-apps
 
 # OpenGL for IMGUI
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
