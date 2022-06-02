@@ -43,4 +43,4 @@ ENV PATH $MAVEN_HOME:$MAVEN_HOME/bin:$PATH
 
 # X11
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends x11-apps
+    && apt-get -y install --no-install-recommends x11-apps libgtk-3-0
