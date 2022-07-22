@@ -1,7 +1,7 @@
 ARG VARIANT=latest
 FROM joseluzon/ubuntu-base:${VARIANT}
 
-ARG NODEJS_VERSION=16.13.1
+ARG NODEJS_VERSION=16.16.0
 ARG NODEJS_PACKAGE=https://nodejs.org/dist/v${NODEJS_VERSION}/node-v${NODEJS_VERSION}-linux-x64.tar.xz
 
 # Node.js:

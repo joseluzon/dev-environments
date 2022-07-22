@@ -112,7 +112,7 @@ services:
           - marcc_network
 
     java:
-      image: joseluzon/java_zulu-jdk17_maven
+      image: joseluzon/java-zulu_jdk17
       container_name: java
       restart: always
       tty: true
@@ -123,7 +123,7 @@ services:
       networks:
         - marcc_network
       volumes:
-        - ..:/workspace
+        - C:\Code\marcc-vscode:/workspace
 
     python3:
       image: joseluzon/python3-kafka
@@ -134,8 +134,6 @@ services:
         - 8889:8889
       networks:
         - marcc_network
-      volumes:
-        - ..:/workspace
 
     radar-simulator:
       image: joseluzon/cpp-qt5
@@ -149,7 +147,7 @@ services:
       networks:
         - marcc_network
       volumes:
-        - ../radar-simulator:/workspace
+        - C:\Code\marcc-vscode\radar-simulator:/workspace
 
 networks:
     marcc_network:
