@@ -1,0 +1,41 @@
+{
+	"name": "Radar Operating Terminal - ReactJS",
+	"build": {
+		"dockerfile": "../Dockerfile",
+		// Update 'VARIANT' to pick an Ubuntu OS version: 20.04, 18.04 
+		"args": { "VARIANT": "20.04" }
+	},
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined",
+		"--net", "host",
+        "-e", "DISPLAY=:0.0", // run "xhost +" on host, to enable access DISPLAY inside container
+        //"-v", "/tmp/.X11-unix:/tmp/.X11-unix" 
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash"
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"mutantdino.resourcemonitor",
+		"visualstudioexptteam.vscodeintellicode",
+		"hbenl.vscode-test-explorer",
+		"xabikos.reactsnippets",
+		"yzhang.markdown-all-in-one",
+		"jawandarajbir.react-vscode-extension-pack",
+		"mhutchie.git-graph",
+		"donjayamanne.githistory",
+		"eamodio.gitlens"
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [1111]
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	//"remoteUser": "node"
+
+}

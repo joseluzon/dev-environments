@@ -2,7 +2,7 @@
 ARG VARIANT=20.04
 FROM ubuntu:${VARIANT}
 
-ARG NODEJS_VERSION=16.13.1
+ARG NODEJS_VERSION=16.15.0
 ARG NODEJS_PACKAGE=https://nodejs.org/dist/v${NODEJS_VERSION}/node-v${NODEJS_VERSION}-linux-x64.tar.xz
 
 # Install needed packages. Use a separate RUN statement to add your own dependencies.

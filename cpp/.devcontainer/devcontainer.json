@@ -1,0 +1,44 @@
+{
+	"name": "C++",
+	"build": {
+		"dockerfile": "../Dockerfile",
+		// Update 'VARIANT' to pick an Ubuntu OS version: 20.04, 18.04 
+		"args": { "VARIANT": "20.04" }
+	},
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined",
+		"--net", "host",
+        "-e", "DISPLAY=:0.0", // run "xhost +" on host, to enable access DISPLAY inside container
+        //"-v", "/tmp/.X11-unix:/tmp/.X11-unix" 
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": { 
+		"terminal.integrated.shell.linux": "/bin/bash"
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-vscode.cpptools",
+		"visualstudioexptteam.vscodeintellicode",
+		"hbenl.vscode-test-explorer",
+		"twxs.cmake",
+		"ms-vscode.cmake-tools",
+		"fredericbonnet.cmake-test-adapter",
+		"cschlosser.doxdocgen",
+		"mine.cpplint",
+		"notskm.clang-tidy",
+		"xaver.clang-format",
+		"mutantdino.resourcemonitor",
+		"yzhang.markdown-all-in-one"
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [1111]
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode"
+
+}
