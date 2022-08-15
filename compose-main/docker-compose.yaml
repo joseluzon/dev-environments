@@ -1,0 +1,227 @@
+version: '3.8'
+
+services:
+    postgresql:
+        # image: postgis/postgis:14-3.2-alpine
+        image: timescale/timescaledb-ha:pg14-latest
+        container_name: postgresql
+        environment:
+            POSTGRES_PASSWORD: marcc
+            POSTGRES_USER: marcc
+            POSTGRES_DB: marccdb
+            ALLOW_IP_RANGE: 0.0.0.0/0
+        restart: always
+        volumes:
+            - ~/.indra/marcc/db/r2dbc/postgresql/data:/var/lib/postgresql/data
+            - ~/.indra/marcc/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
+        ports:
+            - 8000:5432
+        networks:
+            - marcc_network
+    
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        container_name: pgadmin
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=marcc@indra.es
+            - PGADMIN_DEFAULT_PASSWORD=marcc
+        ports:
+            - 8001:80
+        networks:
+            - marcc_network
+
+    zookeeper:
+      image: confluentinc/cp-zookeeper:7.2.1
+      hostname: zookeeper
+      container_name: zookeeper
+      ports:
+        - '2181:2181'
+      environment:
+        ZOOKEEPER_CLIENT_PORT: '2181'
+        ZOOKEEPER_TICK_TIME: '2000'
+        ZOOKEEPER_SERVER_ID: 1
+        ZOOKEEPER_SERVERS: zookeeper:2888:3888
+      networks:
+        - marcc_network
+
+    kafka:
+        image: confluentinc/cp-kafka:7.2.1
+        hostname: kafka
+        container_name: kafka
+        depends_on:
+            - zookeeper
+        ports:
+            - '29092:29092'
+            - '9092:9092'
+            - '29093:29093'
+            - '9093:9093'
+            - "29094:29094"
+            - "9999:9999"
+        environment:
+            KAFKA_BROKER_ID: '1'
+            KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL,SSL_HOST:SSL,DOCKER:PLAINTEXT
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka:29093,SSL_HOST://localhost:9093,DOCKER://host.docker.internal:29094
+            KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            # Defaults to 10080 (7 days) -> MARCC just 1 minute
+            KAFKA_OFFSETS_RETENTION_MINUTES: 1
+            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: '0'
+            # SSL:
+            KAFKA_SSL_KEYSTORE_FILENAME: 'kafka.keystore.jks'
+            KAFKA_SSL_KEYSTORE_CREDENTIALS: 'keystore_creds'
+            KAFKA_SSL_KEY_CREDENTIALS: 'sslkey_creds'
+            KAFKA_SSL_TRUSTSTORE_FILENAME: 'kafka.truststore.jks'
+            KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'truststore_creds'
+            KAFKA_SSL_CLIENT_AUTH: 'required'
+            #KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: 'PLAIN'
+            #KAFKA_SASL_ENABLED_MECHANISMS: 'PLAIN,SCRAM-SHA-256,SCRAM-SHA-512'
+            #KAFKA_OPTS: '-Djava.security.auth.login.config=/opt/kafka/config/server-jaas.conf'
+            KAFKA_AUTHORIZER_CLASS_NAME: "kafka.security.authorizer.AclAuthorizer"
+            KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'true'
+            # JMX:
+            KAFKA_JMX_PORT: 9999
+            KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
+            # suppress verbosity
+            # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
+            KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
+            KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Djava.net.preferIPv4Stack=true'
+        volumes:
+            - ~/.indra/marcc/kafka/secrets/kafka.keystore.jks:/etc/kafka/secrets/kafka.keystore.jks:ro,z
+            - ~/.indra/marcc/kafka/secrets/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro,z
+            - ~/.indra/marcc/kafka/secrets/keystore_creds:/etc/kafka/secrets/keystore_creds:ro,z
+            - ~/.indra/marcc/kafka/secrets/sslkey_creds:/etc/kafka/secrets/sslkey_creds:ro,z
+            - ~/.indra/marcc/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
+        networks:
+            - marcc_network
+
+    kafka-manager:
+      image: sheepkiller/kafka-manager
+      container_name: kafka-manager
+      depends_on:
+          - zookeeper
+      user: root
+      ports:
+          - 8008:9000
+      environment:
+          - ZK_HOSTS=zookeeper:2181
+      networks:
+          - marcc_network
+
+    java:
+      image: joseluzon/java-zulu_jdk17
+      container_name: java
+      restart: always
+      tty: true
+      environment:
+        DISPLAY: 172.24.32.1:0
+      ports:
+        - 8888:8888
+      networks:
+        - marcc_network
+      volumes:
+        - C:\Code\marcc-vscode:/workspace
+
+    python3:
+      image: joseluzon/python3-kafka
+      container_name: python3
+      restart: always
+      tty: true
+      ports:
+        - 8889:8889
+      networks:
+        - marcc_network
+
+    radar-simulator:
+      image: joseluzon/cpp-qt5
+      container_name: radar-simulator
+      restart: always
+      tty: true
+      environment:
+        DISPLAY: 172.24.32.1:0
+      ports:
+        - 8810:8810
+      networks:
+        - marcc_network
+      volumes:
+        - C:\Code\marcc-vscode\radar-simulator:/workspace
+
+networks:
+    marcc_network:
+        driver: bridge
+
+    # openldap:
+    #     image: docker.io/bitnami/openldap:2.6
+    #     container_name: openldap
+    #     ports:
+    #         - '8002:1389'
+    #         - '8003:1636'
+    #     environment:
+    #         - LDAP_ADMIN_USERNAME=marcc
+    #         - LDAP_ADMIN_PASSWORD=marcc
+    #         - LDAP_USERS=marcc01,marcc02
+    #         - LDAP_PASSWORDS=marcc01,marcc02
+    #     volumes:
+    #         - ~/.indra/marcc/ldap/openldap_data:/bitnami/openldap
+    #     networks:
+    #         - marcc_network
+    
+    # elasticsearch:
+    #     image: elasticsearch:7.16.2
+    #     container_name: elasticsearc
+    #     user: elasticsearch
+    #     restart: always
+    #     volumes:
+    #         - ~/.indra/marcc/elasticsearch/data/:/usr/share/elasticsearch/data/:rw
+    #     environment:
+    #         ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+    #         discovery.type: single-node    
+    #     ports:
+    #         - '9200:9200'
+    #         - '9300:9300'
+    #     networks:
+    #         - marcc_network
+
+    # logstash:
+    #     image: logstash:7.16.2
+    #     container_name: logstash
+    #     user: logstash
+    #     restart: always
+    #     volumes:
+    #         - ~/.indra/marcc/logstash/conf:/logstash/conf
+    #     command: logstash -f /logstash/conf/logstash.conf 
+    #     depends_on:
+    #         - elasticsearch
+    #     ports:
+    #         - '9600:9600'
+    #     environment:
+    #         S_JAVA_OPTS: "-Xmx256m -Xms256m"    
+    #     networks:
+    #         - marcc_network
+
+    # kibana:
+    #     image: kibana:7.16.2
+    #     container_name: kibana
+    #     restart: always       
+    #     ports:
+    #         - '5601:5601'
+    #     environment:
+    #         - ELASTICSEARCH_URL=http://elasticsearch:9200  
+    #     depends_on:
+    #         - elasticsearch  
+    #     networks:
+    #         - marcc_network
+
+    # https://www.vinsguru.com/grpc-load-balancing-with-nginx/
+    # nginx:
+    #   image: nginx:1.15-alpine
+    #   depends_on:
+    #     - grpc-server1
+    #     - grpc-server2    
+    #   volumes:
+    #     - ./nginx-conf/conf:/etc/nginx/conf.d
+    #   ports:
+    #     - 6565:6565
