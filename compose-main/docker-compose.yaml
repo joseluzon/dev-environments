@@ -111,19 +111,19 @@ services:
       networks:
           - marcc_network
 
-    java:
+    marcc-workspace:
       image: joseluzon/java-zulu_jdk17
-      container_name: java
+      container_name: marcc-workspace
       restart: always
       tty: true
       environment:
-        DISPLAY: 172.24.32.1:0
+        DISPLAY: 172.28.128.1:0
       ports:
-        - 8888:8888
+        - 8811:8888
       networks:
         - marcc_network
       volumes:
-        - C:\Code\marcc-vscode:/workspace
+        - C:\Code\marcc-workspace:/workspace
 
     python3:
       image: joseluzon/python3-kafka
@@ -141,13 +141,13 @@ services:
       restart: always
       tty: true
       environment:
-        DISPLAY: 172.24.32.1:0
+        DISPLAY: 172.28.128.1:0
       ports:
         - 8810:8810
       networks:
         - marcc_network
       volumes:
-        - C:\Code\marcc-vscode\radar-simulator:/workspace
+        - ~/.indra/marcc/radar-simulator:/workspace
 
 networks:
     marcc_network:
