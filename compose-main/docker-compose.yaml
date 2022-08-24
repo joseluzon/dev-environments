@@ -124,6 +124,7 @@ services:
         - marcc_network
       volumes:
         - C:\Code\marcc-workspace:/workspace
+        - marcc-dev-volume:/dev-workspace/
 
     python3:
       image: joseluzon/python3-kafka
@@ -152,6 +153,9 @@ services:
 networks:
     marcc_network:
         driver: bridge
+
+volumes:
+  marcc-dev-volume:
 
     # openldap:
     #     image: docker.io/bitnami/openldap:2.6
