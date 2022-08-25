@@ -18,6 +18,11 @@ services:
             - 8000:5432
         networks:
             - marcc_network
+        deploy:
+          resources:
+              limits:
+                cpus: '0.50'
+                memory: 256M
     
     pgadmin:
         image: dpage/pgadmin4:latest
@@ -29,6 +34,11 @@ services:
             - 8001:80
         networks:
             - marcc_network
+        deploy:
+          resources:
+              limits:
+                cpus: '0.50'
+                memory: 256M
 
     zookeeper:
       image: confluentinc/cp-zookeeper:7.2.1
@@ -43,6 +53,11 @@ services:
         ZOOKEEPER_SERVERS: zookeeper:2888:3888
       networks:
         - marcc_network
+      deploy:
+        resources:
+            limits:
+              cpus: '1'
+              memory: 256M
 
     kafka:
         image: confluentinc/cp-kafka:7.2.1
@@ -97,6 +112,11 @@ services:
             - ~/.indra/marcc/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
         networks:
             - marcc_network
+        deploy:
+          resources:
+            limits:
+              cpus: '1'
+              memory: 256M
 
     kafka-manager:
       image: sheepkiller/kafka-manager
@@ -110,6 +130,11 @@ services:
           - ZK_HOSTS=zookeeper:2181
       networks:
           - marcc_network
+      deploy:
+        resources:
+          limits:
+            cpus: '0.50'
+            memory: 256M
 
     marcc-workspace:
       image: joseluzon/java-zulu_jdk17
@@ -117,14 +142,19 @@ services:
       restart: always
       tty: true
       environment:
-        DISPLAY: 172.28.128.1:0
+        DISPLAY: 172.18.208.1:0
       ports:
         - 8811:8888
       networks:
         - marcc_network
       volumes:
-        - C:\Code\marcc-workspace:/workspace
-        - marcc-dev-volume:/dev-workspace/
+        - C:\Code\marcc-workspace:/shared-host
+        - marcc-dev-volume:/workspace/
+      deploy:
+        resources:
+            limits:
+              cpus: '2'
+              memory: 4G
 
     python3:
       image: joseluzon/python3-kafka
@@ -142,13 +172,18 @@ services:
       restart: always
       tty: true
       environment:
-        DISPLAY: 172.28.128.1:0
+        DISPLAY: 172.18.208.1:0
       ports:
         - 8810:8810
       networks:
         - marcc_network
       volumes:
         - ~/.indra/marcc/radar-simulator:/workspace
+      deploy:
+        resources:
+            limits:
+              cpus: '1'
+              memory: 256M
 
 networks:
     marcc_network:
