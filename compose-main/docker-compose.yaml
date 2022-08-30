@@ -110,13 +110,15 @@ services:
             - ~/.indra/marcc/kafka/secrets/keystore_creds:/etc/kafka/secrets/keystore_creds:ro,z
             - ~/.indra/marcc/kafka/secrets/sslkey_creds:/etc/kafka/secrets/sslkey_creds:ro,z
             - ~/.indra/marcc/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
+            - ~/.indra/marcc/kafka/topics/init.sh:/etc/kafka/topics/init.sh
+        #command: sh -c "kafka-server-start /etc/kafka/server.properties && /etc/kafka/topics/init.sh"
         networks:
             - marcc_network
         deploy:
           resources:
             limits:
               cpus: '1'
-              memory: 256M
+              memory: 1024M
 
     kafka-manager:
       image: sheepkiller/kafka-manager
@@ -134,7 +136,7 @@ services:
         resources:
           limits:
             cpus: '0.50'
-            memory: 256M
+            memory: 512M
 
     marcc-workspace:
       image: joseluzon/java-zulu_jdk17
@@ -142,7 +144,7 @@ services:
       restart: always
       tty: true
       environment:
-        DISPLAY: 172.18.208.1:0
+        DISPLAY: 172.30.64.1:0
       ports:
         - 8811:8888
       networks:
@@ -150,11 +152,12 @@ services:
       volumes:
         - C:\Code\marcc-workspace:/shared-host
         - marcc-dev-volume:/workspace/
+        - marcc-dev-m2:/root/.m2
       deploy:
         resources:
             limits:
               cpus: '2'
-              memory: 4G
+              memory: 6G
 
     python3:
       image: joseluzon/python3-kafka
@@ -182,7 +185,7 @@ services:
       deploy:
         resources:
             limits:
-              cpus: '1'
+              cpus: '0.5'
               memory: 256M
 
 networks:
@@ -191,6 +194,7 @@ networks:
 
 volumes:
   marcc-dev-volume:
+  marcc-dev-m2:
 
     # openldap:
     #     image: docker.io/bitnami/openldap:2.6
