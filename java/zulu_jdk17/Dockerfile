@@ -21,8 +21,10 @@ RUN wget ${MAVEN_PACKAGE} -P /tmp && ls -l /tmp/*maven* && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven
 
 ENV M2_HOME /opt/maven
+ENV M2 $M2_HOME/bin
 ENV MAVEN_HOME /opt/maven
-ENV PATH $MAVEN_HOME:$MAVEN_HOME/bin:$PATH
+ENV MAVEN_OPTS -Dmaven.multiModuleProjectDirectory=$M2_HOME
+ENV PATH $M2_HOME:$M2:$PATH
 
 # X11
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
