@@ -157,7 +157,7 @@ services:
         resources:
             limits:
               cpus: '2'
-              memory: 6G
+              memory: 4G
 
     python3:
       image: joseluzon/python3-kafka
@@ -187,6 +187,24 @@ services:
             limits:
               cpus: '0.5'
               memory: 256M
+      
+    hmi-web:
+      image: joseluzon/nodejs16
+      container_name: hmi-web
+      restart: always
+      tty: true
+      ports:
+        - 8880:8880
+      networks:
+        - marcc_network
+      volumes:
+        - marcc-dev-volume:/workspace
+        - marcc-dev-node_modules:/workspace/marcc/modules/hmi-web/node_modules
+      deploy:
+        resources:
+            limits:
+              cpus: '2'
+              memory: 2G
 
 networks:
     marcc_network:
@@ -195,6 +213,7 @@ networks:
 volumes:
   marcc-dev-volume:
   marcc-dev-m2:
+  marcc-dev-node_modules:
 
     # openldap:
     #     image: docker.io/bitnami/openldap:2.6
