@@ -1,219 +1,256 @@
 version: '3.8'
 
 services:
-    postgresql:
-        # image: postgis/postgis:14-3.2-alpine
-        image: timescale/timescaledb-ha:pg14-latest
-        container_name: postgresql
-        environment:
-            POSTGRES_PASSWORD: marcc
-            POSTGRES_USER: marcc
-            POSTGRES_DB: marccdb
-            ALLOW_IP_RANGE: 0.0.0.0/0
-        restart: always
-        volumes:
-            - ~/.indra/marcc/db/r2dbc/postgresql/data:/var/lib/postgresql/data
-            - ~/.indra/marcc/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
-        ports:
-            - 8000:5432
-        networks:
-            - marcc_network
-        deploy:
-          resources:
-              limits:
-                cpus: '0.50'
-                memory: 256M
-    
-    pgadmin:
-        image: dpage/pgadmin4:latest
-        container_name: pgadmin
-        environment:
-            - PGADMIN_DEFAULT_EMAIL=marcc@indra.es
-            - PGADMIN_DEFAULT_PASSWORD=marcc
-        ports:
-            - 8001:80
-        networks:
-            - marcc_network
-        deploy:
-          resources:
-              limits:
-                cpus: '0.50'
-                memory: 256M
+  dev-java:
+    image: joseluzon/java-zulu_jdk17
+    container_name: dev-java
+    restart: always
+    tty: true
+    environment:
+      DISPLAY: 172.30.240.1:0
+    ports:
+      - 8810:8888
+    networks:
+      - devenv_network
+    volumes:
+      - devenv-java-workspace:/workspace/
+      - devenv-m2:/root/.m2
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
-    zookeeper:
-      image: confluentinc/cp-zookeeper:7.2.1
-      hostname: zookeeper
-      container_name: zookeeper
-      ports:
-        - '2181:2181'
-      environment:
-        ZOOKEEPER_CLIENT_PORT: '2181'
-        ZOOKEEPER_TICK_TIME: '2000'
-        ZOOKEEPER_SERVER_ID: 1
-        ZOOKEEPER_SERVERS: zookeeper:2888:3888
-      networks:
-        - marcc_network
-      deploy:
-        resources:
-            limits:
-              cpus: '1'
-              memory: 256M
+  devenv-cpp:
+    image: joseluzon/cpp-conan
+    container_name: devenv-cpp
+    restart: always
+    tty: true
+    environment:
+      DISPLAY: 172.30.240.1:0
+    ports:
+      - 8811:8810
+    networks:
+      - devenv_network
+    volumes:
+      - devenv-cpp-workspace:/workspace
+      - devenv-conan:/root/.conan
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
 
-    kafka:
-        image: confluentinc/cp-kafka:7.2.1
-        hostname: kafka
-        container_name: kafka
-        depends_on:
-            - zookeeper
-        ports:
-            - '29092:29092'
-            - '9092:9092'
-            - '29093:29093'
-            - '9093:9093'
-            - "29094:29094"
-            - "9999:9999"
-        environment:
-            KAFKA_BROKER_ID: '1'
-            KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL,SSL_HOST:SSL,DOCKER:PLAINTEXT
-            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka:29093,SSL_HOST://localhost:9093,DOCKER://host.docker.internal:29094
-            KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
-            KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-            # Defaults to 10080 (7 days) -> MARCC just 1 minute
-            KAFKA_OFFSETS_RETENTION_MINUTES: 1
-            KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-            KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: '0'
-            # SSL:
-            KAFKA_SSL_KEYSTORE_FILENAME: 'kafka.keystore.jks'
-            KAFKA_SSL_KEYSTORE_CREDENTIALS: 'keystore_creds'
-            KAFKA_SSL_KEY_CREDENTIALS: 'sslkey_creds'
-            KAFKA_SSL_TRUSTSTORE_FILENAME: 'kafka.truststore.jks'
-            KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'truststore_creds'
-            KAFKA_SSL_CLIENT_AUTH: 'required'
-            #KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: 'PLAIN'
-            #KAFKA_SASL_ENABLED_MECHANISMS: 'PLAIN,SCRAM-SHA-256,SCRAM-SHA-512'
-            #KAFKA_OPTS: '-Djava.security.auth.login.config=/opt/kafka/config/server-jaas.conf'
-            KAFKA_AUTHORIZER_CLASS_NAME: "kafka.security.authorizer.AclAuthorizer"
-            KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'true'
-            # JMX:
-            KAFKA_JMX_PORT: 9999
-            KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
-            # suppress verbosity
-            # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
-            KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
-            KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Djava.net.preferIPv4Stack=true'
-        volumes:
-            - ~/.indra/marcc/kafka/secrets/kafka.keystore.jks:/etc/kafka/secrets/kafka.keystore.jks:ro,z
-            - ~/.indra/marcc/kafka/secrets/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro,z
-            - ~/.indra/marcc/kafka/secrets/keystore_creds:/etc/kafka/secrets/keystore_creds:ro,z
-            - ~/.indra/marcc/kafka/secrets/sslkey_creds:/etc/kafka/secrets/sslkey_creds:ro,z
-            - ~/.indra/marcc/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
-            - ~/.indra/marcc/kafka/topics/init.sh:/etc/kafka/topics/init.sh
-        #command: sh -c "kafka-server-start /etc/kafka/server.properties && /etc/kafka/topics/init.sh"
-        networks:
-            - marcc_network
-        deploy:
-          resources:
-            limits:
-              cpus: '1'
-              memory: 1024M
+  devenv-node:
+    image: joseluzon/nodejs16
+    container_name: devenv-node
+    restart: always
+    tty: true
+    ports:
+      - 8812:8812
+    networks:
+      - devenv_network
+    volumes:
+      - devenv-node-workspace:/workspace
+      - devenv-node_modules:/workspace/node_modules
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
 
-    kafka-manager:
-      image: sheepkiller/kafka-manager
-      container_name: kafka-manager
-      depends_on:
-          - zookeeper
-      user: root
-      ports:
-          - 8008:9000
-      environment:
-          - ZK_HOSTS=zookeeper:2181
-      networks:
-          - marcc_network
-      deploy:
-        resources:
-          limits:
-            cpus: '0.50'
-            memory: 512M
+  cv-latex:
+    image: joseluzon/cv-latex
+    container_name: cv-latex
+    restart: always
+    tty: true
+    ports:
+      - 8813:8813
+    networks:
+      - devenv_network
+    volumes:
+      - cv-latex-workspace:/workspace
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+  
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    restart: always
+    ports: 
+        - 8870:27017
+    volumes: 
+        - ~/.devel/db/mongodb/data:/data
+    environment: 
+        - MONGO_INITDB_ROOT_USERNAME=rootuser
+        - MONGO_INITDB_ROOT_PASSWORD=rootpass
+    networks:
+        - devenv_network
 
-    marcc-workspace:
-      image: joseluzon/java-zulu_jdk17
-      container_name: marcc-workspace
-      restart: always
-      tty: true
-      environment:
-        DISPLAY: 172.30.64.1:0
-      ports:
-        - 8811:8888
-      networks:
-        - marcc_network
-      volumes:
-        - C:\Code\marcc-workspace:/shared-host
-        - marcc-dev-volume:/workspace/
-        - marcc-dev-m2:/root/.m2
-      deploy:
-        resources:
-            limits:
-              cpus: '2'
-              memory: 4G
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+        - 8871:8081
+    environment:
+        - ME_CONFIG_MONGODB_ADMINUSERNAME=rootuser
+        - ME_CONFIG_MONGODB_ADMINPASSWORD=rootpass
+        - ME_CONFIG_MONGODB_SERVER=mongodb
+    networks:
+        - devenv_network
 
-    python3:
-      image: joseluzon/python3-kafka
-      container_name: python3
-      restart: always
-      tty: true
-      ports:
-        - 8889:8889
-      networks:
-        - marcc_network
+  postgresql:
+    image: timescale/timescaledb-ha:pg14-latest
+    container_name: postgresql
+    environment:
+      POSTGRES_PASSWORD: devel
+      POSTGRES_USER: devel
+      POSTGRES_DB: develdb
+      ALLOW_IP_RANGE: 0.0.0.0/0
+    restart: always
+    volumes:
+      - ~/.devel/db/r2dbc/postgresql/data:/var/lib/postgresql/data
+      - ~/.devel/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
+    ports:
+      - 8880:5432
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
 
-    radar-simulator:
-      image: joseluzon/cpp-qt5
-      container_name: radar-simulator
-      restart: always
-      tty: true
-      environment:
-        DISPLAY: 172.18.208.1:0
-      ports:
-        - 8810:8810
-      networks:
-        - marcc_network
-      volumes:
-        - ~/.indra/marcc/radar-simulator:/workspace
-      deploy:
-        resources:
-            limits:
-              cpus: '0.5'
-              memory: 256M
-      
-    hmi-web:
-      image: joseluzon/nodejs16
-      container_name: hmi-web
-      restart: always
-      tty: true
-      ports:
-        - 8880:8880
-      networks:
-        - marcc_network
-      volumes:
-        - marcc-dev-volume:/workspace
-        - marcc-dev-node_modules:/workspace/marcc/modules/hmi-web/node_modules
-      deploy:
-        resources:
-            limits:
-              cpus: '2'
-              memory: 2G
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=devel@devel.es
+      - PGADMIN_DEFAULT_PASSWORD=devel
+    ports:
+      - 8881:80
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.2.1
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: '2181'
+      ZOOKEEPER_TICK_TIME: '2000'
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zookeeper:2888:3888
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+
+  kafka:
+    image: confluentinc/cp-kafka:7.2.1
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - '29092:29092'
+      - '9092:9092'
+      - '29093:29093'
+      - '9093:9093'
+      - "29094:29094"
+      - "9999:9999"
+    environment:
+      KAFKA_BROKER_ID: '1'
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL,SSL_HOST:SSL,DOCKER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka:29093,SSL_HOST://localhost:9093,DOCKER://host.docker.internal:29094
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Defaults to 10080 (7 days) -> devel just 1 minute
+      KAFKA_OFFSETS_RETENTION_MINUTES: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: '0'
+      # SSL:
+      KAFKA_SSL_KEYSTORE_FILENAME: 'kafka.keystore.jks'
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: 'keystore_creds'
+      KAFKA_SSL_KEY_CREDENTIALS: 'sslkey_creds'
+      KAFKA_SSL_TRUSTSTORE_FILENAME: 'kafka.truststore.jks'
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'truststore_creds'
+      KAFKA_SSL_CLIENT_AUTH: 'required'
+      #KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: 'PLAIN'
+      #KAFKA_SASL_ENABLED_MECHANISMS: 'PLAIN,SCRAM-SHA-256,SCRAM-SHA-512'
+      #KAFKA_OPTS: '-Djava.security.auth.login.config=/opt/kafka/config/server-jaas.conf'
+      KAFKA_AUTHORIZER_CLASS_NAME: "kafka.security.authorizer.AclAuthorizer"
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'true'
+      # JMX:
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
+      # suppress verbosity
+      # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
+      KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
+      KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Djava.net.preferIPv4Stack=true'
+    volumes:
+      - ~/.devel/kafka/secrets/kafka.keystore.jks:/etc/kafka/secrets/kafka.keystore.jks:ro,z
+      - ~/.devel/kafka/secrets/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro,z
+      - ~/.devel/kafka/secrets/keystore_creds:/etc/kafka/secrets/keystore_creds:ro,z
+      - ~/.devel/kafka/secrets/sslkey_creds:/etc/kafka/secrets/sslkey_creds:ro,z
+      - ~/.devel/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
+      - ~/.devel/kafka/topics/init.sh:/etc/kafka/topics/init.sh
+    #command: sh -c "kafka-server-start /etc/kafka/server.properties && /etc/kafka/topics/init.sh"
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1024M
+
+  kafka-manager:
+    image: sheepkiller/kafka-manager
+    container_name: kafka-manager
+    depends_on:
+      - zookeeper
+    user: root
+    ports:
+      - 8008:9000
+    environment:
+      - ZK_HOSTS=zookeeper:2181
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
 
 networks:
-    marcc_network:
-        driver: bridge
+  devenv_network:
+    driver: bridge
 
 volumes:
-  marcc-dev-volume:
-  marcc-dev-m2:
-  marcc-dev-node_modules:
+  devenv-java-workspace:
+  devenv-cpp-workspace:
+  devenv-node-workspace:
+  devenv-conan:
+  devenv-m2:
+  devenv-node_modules:
+  cv-latex-workspace:
 
     # openldap:
     #     image: docker.io/bitnami/openldap:2.6
@@ -222,22 +259,22 @@ volumes:
     #         - '8002:1389'
     #         - '8003:1636'
     #     environment:
-    #         - LDAP_ADMIN_USERNAME=marcc
-    #         - LDAP_ADMIN_PASSWORD=marcc
-    #         - LDAP_USERS=marcc01,marcc02
-    #         - LDAP_PASSWORDS=marcc01,marcc02
+    #         - LDAP_ADMIN_USERNAME=devel
+    #         - LDAP_ADMIN_PASSWORD=devel
+    #         - LDAP_USERS=devel01,devel02
+    #         - LDAP_PASSWORDS=devel01,devel02
     #     volumes:
-    #         - ~/.indra/marcc/ldap/openldap_data:/bitnami/openldap
+    #         - ~/.devel/ldap/openldap_data:/bitnami/openldap
     #     networks:
-    #         - marcc_network
-    
+    #         - devenv_network
+
     # elasticsearch:
     #     image: elasticsearch:7.16.2
     #     container_name: elasticsearc
     #     user: elasticsearch
     #     restart: always
     #     volumes:
-    #         - ~/.indra/marcc/elasticsearch/data/:/usr/share/elasticsearch/data/:rw
+    #         - ~/.devel/elasticsearch/data/:/usr/share/elasticsearch/data/:rw
     #     environment:
     #         ES_JAVA_OPTS: "-Xmx256m -Xms256m"
     #         discovery.type: single-node    
@@ -245,7 +282,7 @@ volumes:
     #         - '9200:9200'
     #         - '9300:9300'
     #     networks:
-    #         - marcc_network
+    #         - devenv_network
 
     # logstash:
     #     image: logstash:7.16.2
@@ -253,7 +290,7 @@ volumes:
     #     user: logstash
     #     restart: always
     #     volumes:
-    #         - ~/.indra/marcc/logstash/conf:/logstash/conf
+    #         - ~/.devel/logstash/conf:/logstash/conf
     #     command: logstash -f /logstash/conf/logstash.conf 
     #     depends_on:
     #         - elasticsearch
@@ -262,7 +299,7 @@ volumes:
     #     environment:
     #         S_JAVA_OPTS: "-Xmx256m -Xms256m"    
     #     networks:
-    #         - marcc_network
+    #         - devenv_network
 
     # kibana:
     #     image: kibana:7.16.2
@@ -275,7 +312,7 @@ volumes:
     #     depends_on:
     #         - elasticsearch  
     #     networks:
-    #         - marcc_network
+    #         - devenv_network
 
     # https://www.vinsguru.com/grpc-load-balancing-with-nginx/
     # nginx:
