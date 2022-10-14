@@ -9,7 +9,7 @@ services:
     environment:
       DISPLAY: 172.30.240.1:0
     ports:
-      - 8810:8888
+      - 8810:8810
     networks:
       - devenv_network
     volumes:
@@ -29,7 +29,7 @@ services:
     environment:
       DISPLAY: 172.30.240.1:0
     ports:
-      - 8811:8810
+      - 8820:8820
     networks:
       - devenv_network
     volumes:
@@ -47,12 +47,30 @@ services:
     restart: always
     tty: true
     ports:
-      - 8812:8812
+      - 8830:8830
     networks:
       - devenv_network
     volumes:
       - devenv-node-workspace:/workspace
       - devenv-node_modules:/workspace/node_modules
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  devenv-django:
+    image: joseluzon/python3-django
+    container_name: devenv-django
+    restart: always
+    tty: true
+    ports:
+      - 8840:8840
+      - 8841:8841
+    networks:
+      - devenv_network
+    volumes:
+      - devenv-python-workspace:/workspace
     deploy:
       resources:
         limits:
@@ -65,7 +83,7 @@ services:
     restart: always
     tty: true
     ports:
-      - 8813:8813
+      - 8840:8840
     networks:
       - devenv_network
     volumes:
@@ -81,7 +99,7 @@ services:
     container_name: mongodb
     restart: always
     ports: 
-        - 8870:27017
+        - 8850:27017
     volumes: 
         - ~/.devel/db/mongodb/data:/data
     environment: 
@@ -95,7 +113,7 @@ services:
     container_name: mongo-express
     restart: always
     ports:
-        - 8871:8081
+        - 8851:8081
     environment:
         - ME_CONFIG_MONGODB_ADMINUSERNAME=rootuser
         - ME_CONFIG_MONGODB_ADMINPASSWORD=rootpass
@@ -116,7 +134,7 @@ services:
       - ~/.devel/db/r2dbc/postgresql/data:/var/lib/postgresql/data
       - ~/.devel/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
     ports:
-      - 8880:5432
+      - 8860:5432
     networks:
       - devenv_network
     deploy:
@@ -132,7 +150,7 @@ services:
       - PGADMIN_DEFAULT_EMAIL=devel@devel.es
       - PGADMIN_DEFAULT_PASSWORD=devel
     ports:
-      - 8881:80
+      - 8861:80
     networks:
       - devenv_network
     deploy:
@@ -228,7 +246,7 @@ services:
       - zookeeper
     user: root
     ports:
-      - 8008:9000
+      - 9000:9000
     environment:
       - ZK_HOSTS=zookeeper:2181
     networks:
@@ -247,6 +265,7 @@ volumes:
   devenv-java-workspace:
   devenv-cpp-workspace:
   devenv-node-workspace:
+  devenv-python-workspace:
   devenv-conan:
   devenv-m2:
   devenv-node_modules:

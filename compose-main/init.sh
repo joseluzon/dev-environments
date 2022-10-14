@@ -13,3 +13,6 @@ kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replic
 kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic failures-topic --config retention.ms=100 log.retention.ms=100
 kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic lrus-topic --config retention.ms=100 log.retention.ms=100
 kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic datarequests-topic --config retention.ms=100 log.retention.ms=100
+kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic commandssend-topic --config retention.ms=100 log.retention.ms=100
+kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic datacommand-topic --config retention.ms=100 log.retention.ms=100
+kafka-topics --create --if-not-exists --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic accessrequest-topic --config retention.ms=100 log.retention.ms=100
