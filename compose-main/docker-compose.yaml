@@ -59,9 +59,9 @@ services:
           cpus: '2'
           memory: 2G
 
-  devenv-django:
-    image: joseluzon/python3-django
-    container_name: devenv-django
+  devenv-python3:
+    image: joseluzon/python3-base
+    container_name: devenv-python3
     restart: always
     tty: true
     ports:
@@ -71,6 +71,8 @@ services:
       - devenv_network
     volumes:
       - devenv-python-workspace:/workspace
+      - devenv-python-virtualenvs:/root/.local/share/virtualenvs
+      - C:\Users\josel\code:/hostshared
     deploy:
       resources:
         limits:
@@ -266,6 +268,7 @@ volumes:
   devenv-cpp-workspace:
   devenv-node-workspace:
   devenv-python-workspace:
+  devenv-python-virtualenvs:
   devenv-conan:
   devenv-m2:
   devenv-node_modules:

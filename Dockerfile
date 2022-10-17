@@ -16,3 +16,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # Net Tools
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends net-tools iputils-ping
+
+# Firacode fonts
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends install fonts-firacode
