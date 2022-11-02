@@ -72,7 +72,6 @@ services:
     volumes:
       - devenv-python-workspace:/workspace
       - devenv-python-virtualenvs:/root/.local/share/virtualenvs
-      - C:\Users\josel\code:/hostshared
     deploy:
       resources:
         limits:
@@ -95,6 +94,20 @@ services:
         limits:
           cpus: '2'
           memory: 1G
+
+  rdcs:
+    image: centos7-base:latest
+    container_name: rdcs
+    restart: always
+    tty: true
+    privileged: true
+    ports: 
+        - 4444:4444
+        - 4445:4445
+    volumes: 
+        - ~/.devel/rdcs/ltr25-ea/ltr25:/ltr25-ea
+    networks:
+        - devenv_network
   
   mongodb:
     image: mongo
@@ -127,8 +140,8 @@ services:
     image: timescale/timescaledb-ha:pg14-latest
     container_name: postgresql
     environment:
-      POSTGRES_PASSWORD: devel
       POSTGRES_USER: devel
+      POSTGRES_PASSWORD: devel
       POSTGRES_DB: develdb
       ALLOW_IP_RANGE: 0.0.0.0/0
     restart: always
@@ -136,7 +149,7 @@ services:
       - ~/.devel/db/r2dbc/postgresql/data:/var/lib/postgresql/data
       - ~/.devel/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
     ports:
-      - 8860:5432
+      - 5432:5432
     networks:
       - devenv_network
     deploy:
@@ -152,7 +165,7 @@ services:
       - PGADMIN_DEFAULT_EMAIL=devel@devel.es
       - PGADMIN_DEFAULT_PASSWORD=devel
     ports:
-      - 8861:80
+      - 8000:80
     networks:
       - devenv_network
     deploy:
@@ -180,10 +193,10 @@ services:
           cpus: '1'
           memory: 256M
 
-  kafka:
+  kafka-broker-1:
     image: confluentinc/cp-kafka:7.2.1
-    hostname: kafka
-    container_name: kafka
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
     depends_on:
       - zookeeper
     ports:
@@ -197,7 +210,7 @@ services:
       KAFKA_BROKER_ID: '1'
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL,SSL_HOST:SSL,DOCKER:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka:29093,SSL_HOST://localhost:9093,DOCKER://host.docker.internal:29094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka-broker-1:29093,SSL_HOST://localhost:9093,DOCKER://host.docker.internal:29094
       KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -224,7 +237,7 @@ services:
       # suppress verbosity
       # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
       KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
-      KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka -Djava.net.preferIPv4Stack=true'
+      KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-broker-1 -Djava.net.preferIPv4Stack=true'
     volumes:
       - ~/.devel/kafka/secrets/kafka.keystore.jks:/etc/kafka/secrets/kafka.keystore.jks:ro,z
       - ~/.devel/kafka/secrets/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro,z
@@ -233,6 +246,69 @@ services:
       - ~/.devel/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
       - ~/.devel/kafka/topics/init.sh:/etc/kafka/topics/init.sh
     #command: sh -c "kafka-server-start /etc/kafka/server.properties && /etc/kafka/topics/init.sh"
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1024M
+
+# https://github.com/confluentinc/cp-all-in-one/tree/7.2.2-post/cp-all-in-one-kraft
+  kafka-kraft-broker-1:
+    image: confluentinc/cp-kafka:7.2.2
+    hostname: kafka-kraft-broker-1
+    container_name: kafka-kraft-broker-1
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+      - "9999:9999"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SSL:SSL,SSL_HOST:SSL'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-kraft-broker-1:29092,PLAINTEXT_HOST://localhost:9092,SSL://kafka-kraft-broker-1:29093,SSL_HOST://localhost:9093'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      # Defaults to 10080 (7 days) -> devel just 1 minute
+      KAFKA_OFFSETS_RETENTION_MINUTES: 1
+      # SSL:
+      # KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: " "
+      KAFKA_SSL_KEYSTORE_FILENAME: 'kafka.keystore.jks'
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: 'keystore_creds'
+      KAFKA_SSL_KEY_CREDENTIALS: 'sslkey_creds'
+      KAFKA_SSL_TRUSTSTORE_FILENAME: 'kafka.truststore.jks'
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: 'truststore_creds'
+      KAFKA_SSL_CLIENT_AUTH: 'required'
+      # KAFKA_AUTHORIZER_CLASS_NAME: "kafka.security.authorizer.AclAuthorizer"
+      # KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: 'true'
+      # JMX:
+      KAFKA_JMX_PORT: 9999
+      #KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
+      # suppress verbosity
+      # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
+      KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
+      #KAFKA_JMX_OPTS: '-Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.rmi.port=9999 -Djava.rmi.server.hostname=kafka-kraft-broker-1 -Djava.net.preferIPv4Stack=true'
+      # OTHER
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka-kraft-broker-1:29091'
+      KAFKA_LISTENERS: 'CONTROLLER://kafka-kraft-broker-1:29091,PLAINTEXT://kafka-kraft-broker-1:29092,PLAINTEXT_HOST://0.0.0.0:9092,SSL://kafka-kraft-broker-1:29093,SSL_HOST://0.0.0.0:9093'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+    volumes:
+      - ~/.devel/kafka/update_run.sh:/tmp/update_run.sh
+      - ~/.devel/kafka/secrets/kafka.keystore.jks:/etc/kafka/secrets/kafka.keystore.jks:ro,z
+      - ~/.devel/kafka/secrets/kafka.truststore.jks:/etc/kafka/secrets/kafka.truststore.jks:ro,z
+      - ~/.devel/kafka/secrets/keystore_creds:/etc/kafka/secrets/keystore_creds:ro,z
+      - ~/.devel/kafka/secrets/sslkey_creds:/etc/kafka/secrets/sslkey_creds:ro,z
+      - ~/.devel/kafka/secrets/truststore_creds:/etc/kafka/secrets/truststore_creds:ro,z
+      - ~/.devel/kafka/topics/init.sh:/etc/kafka/topics/init.sh
+    command: "bash -c 'if [ ! -f /tmp/update_run.sh ]; then echo \"ERROR: Did you forget the update_run.sh file that came with this docker-compose.yml file?\" && exit 1 ; else /tmp/update_run.sh && /etc/confluent/docker/run && /etc/kafka/topics/init.sh ; fi'"
     networks:
       - devenv_network
     deploy:
@@ -251,6 +327,24 @@ services:
       - 9000:9000
     environment:
       - ZK_HOSTS=zookeeper:2181
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    depends_on:
+      - "kafka-kraft-broker-1"
+    ports:
+      - "9998:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka-kraft-broker-1:29092"
+      JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
     networks:
       - devenv_network
     deploy:
