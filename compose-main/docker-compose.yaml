@@ -4,7 +4,6 @@ services:
   devenv-java:
     image: joseluzon/java-zulu_jdk17
     container_name: dev-java
-    restart: always
     tty: true
     environment:
       DISPLAY: 172.30.240.1:0
@@ -24,7 +23,6 @@ services:
   devenv-cpp:
     image: joseluzon/cpp-base
     container_name: devenv-cpp
-    restart: always
     tty: true
     environment:
       DISPLAY: 172.30.240.1:0
@@ -43,7 +41,6 @@ services:
   devenv-node:
     image: joseluzon/nodejs16
     container_name: devenv-node
-    restart: always
     tty: true
     ports:
       - 8830:8830
@@ -61,7 +58,6 @@ services:
   devenv-python3:
     image: joseluzon/python3-base
     container_name: devenv-python3
-    restart: always
     tty: true
     ports:
       - 8840:8840
@@ -80,7 +76,6 @@ services:
   cv-latex:
     image: joseluzon/cv-latex
     container_name: cv-latex
-    restart: always
     tty: true
     ports:
       - 8840:8840
@@ -97,7 +92,6 @@ services:
   mongodb:
     image: mongo
     container_name: mongodb
-    restart: always
     ports: 
         - 8850:27017
     volumes: 
@@ -111,7 +105,6 @@ services:
   mongo-express:
     image: mongo-express
     container_name: mongo-express
-    restart: always
     ports:
         - 8081:8081
     environment:
@@ -129,7 +122,6 @@ services:
       POSTGRES_PASSWORD: devel
       POSTGRES_DB: develdb
       ALLOW_IP_RANGE: 0.0.0.0/0
-    restart: always
     volumes:
       - ~/.devel/db/r2dbc/postgresql/data:/var/lib/postgresql/data
       - ~/.devel/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
