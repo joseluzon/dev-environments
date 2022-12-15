@@ -9,7 +9,7 @@ services:
     environment:
       DISPLAY: 172.30.240.1:0
     ports:
-      - 8810:8810
+      - 11100:11100
     networks:
       - devenv_network
     volumes:
@@ -22,7 +22,7 @@ services:
           memory: 4G
 
   devenv-cpp:
-    image: joseluzon/cpp-conan
+    image: joseluzon/cpp-base
     container_name: devenv-cpp
     restart: always
     tty: true
@@ -34,7 +34,6 @@ services:
       - devenv_network
     volumes:
       - devenv-cpp-workspace:/workspace
-      - devenv-conan:/root/.conan
     deploy:
       resources:
         limits:
