@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   devenv-java:
-    image: joseluzon/java-zulu_jdk17
+    image: joseluzon/amazon-corretto_jdk17
     container_name: dev-java
     tty: true
     environment:
