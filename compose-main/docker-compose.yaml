@@ -95,7 +95,7 @@ services:
     ports: 
         - 8850:27017
     volumes: 
-        - ~/.devel/db/mongodb/data:/data
+        - devenv-mongo-data:/data
     environment: 
         - MONGO_INITDB_ROOT_USERNAME=rootuser
         - MONGO_INITDB_ROOT_PASSWORD=rootpass
@@ -123,8 +123,8 @@ services:
       POSTGRES_DB: develdb
       ALLOW_IP_RANGE: 0.0.0.0/0
     volumes:
-      - ~/.devel/db/r2dbc/postgresql/data:/var/lib/postgresql/data
-      - ~/.devel/db/r2dbc/postgresql/schema:/docker-entrypoint-initdb.d
+      - devenv-postgresql-data:/var/lib/postgresql/data
+      - ./config/postgresql/db_schema:/docker-entrypoint-initdb.d
     ports:
       - 8860:5432
     networks:
@@ -150,7 +150,134 @@ services:
         limits:
           cpus: '0.50'
           memory: 256M
+  
+  prometheus:
+    image: prom/prometheus:v2.37.6 # LTS
+    container_name: prometheus
+    ports:
+      - 12100:9090
+    networks:
+      - devenv_network
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+  
+  grafana:
+    image: grafana/grafana-oss:9.4.7
+    container_name: grafana
+    ports:
+      - 13100:3000
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - 14100:6379
+    command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - devenv_network
+    volumes:
+      - devenv-redis-data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - 15100:15672
+      - 15101:5672
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  zookeeper-1:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper-1
+    networks:
+      - devenv_network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+  
+  kafka-1:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-1
+    depends_on:
+      - zookeeper-1
+    networks:
+      - devenv_network
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
+      KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+  
+  kafka-manager:
+    image: sheepkiller/kafka-manager
+    container_name: kafka-manager
+    depends_on:
+      - zookeeper-1
+    user: root
+    ports:
+      - 19100:9000
+    environment:
+      - ZK_HOSTS=zookeeper-1:2181
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 20100:8080
+    networks:
+      - devenv_network
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+    volumes:
+      - ~/.devel/kui/config.yml:/etc/kafkaui/dynamic_config.yaml
 
   # https://github.com/confluentinc/cp-all-in-one/tree/7.2.2-post/cp-all-in-one-kraft
   kafka-kraft-broker-1:
@@ -247,6 +374,9 @@ volumes:
   devenv-m2:
   devenv-node_modules:
   cv-latex-workspace:
+  devenv-redis-data:
+  devenv-postgresql-data:
+  devenv-mongo-data:
 
     # openldap:
     #     image: docker.io/bitnami/openldap:2.6

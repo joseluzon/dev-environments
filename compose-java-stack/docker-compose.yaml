@@ -1,0 +1,298 @@
+version: '3.8'
+
+services:
+  devenv-java:
+    image: joseluzon/amazon-corretto_jdk17
+    container_name: dev-java
+    volumes:
+      - devenv-java-workspace:/workspace/
+      - devenv-m2:/root/.m2
+    ports:
+      - 11100:11100
+    networks:
+      - devenv_network
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=rootuser
+      - MONGO_INITDB_ROOT_PASSWORD=rootpass
+    volumes:
+      - devenv-mongo-data:/data
+    ports:
+      - 12100:27017
+    networks:
+      - devenv_network
+
+  postgresql:
+    image: postgres:15-alpine
+    container_name: postgresql
+    environment:
+      POSTGRES_USER: devel
+      POSTGRES_PASSWORD: devel
+      POSTGRES_DB: develdb
+      ALLOW_IP_RANGE: 0.0.0.0/0
+    volumes:
+      - devenv-postgresql-data:/var/lib/postgresql/data
+      - ./config/postgresql/db_schema:/docker-entrypoint-initdb.d
+    ports:
+      - 13100:5432
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+    ports:
+      - 14100:9090
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - 15100:3000
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - devenv-redis-data:/data
+    ports:
+      - 16100:6379
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - 17100:15672
+      - 17101:5672
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  zookeeper-1:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper-1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 18100:2181
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  kafka-1:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-1
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # https://github.com/confluentinc/cp-docker-images/blob/master/debian/kafka/include/etc/confluent/docker/log4j.properties.template
+      KAFKA_LOG4J_LOGGERS: 'kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO'
+    ports:
+      - 18200:29092
+    networks:
+      - devenv_network
+    depends_on:
+      - zookeeper-1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+    volumes:
+      - ./config/kafkaui/config.yml:/etc/kafkaui/dynamic_config.yaml
+    ports:
+      - 18300:8080
+    networks:
+      - devenv_network
+    depends_on:
+      - kafka-1
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  elasticsearch:
+    image: elasticsearch:7.16.2
+    container_name: elasticsearc
+    user: elasticsearch
+    # restart: always
+    volumes:
+      - devenv-elasticsearch-data:/usr/share/elasticsearch/data/:rw
+    environment:
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      discovery.type: single-node
+    ports:
+      - '19100:9200'
+      - '19101:9300'
+    networks:
+      - devenv_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  logstash:
+    image: logstash:7.16.2
+    container_name: logstash
+    user: logstash
+    # restart: always    
+    command: logstash -f /logstash/conf/logstash.conf
+    environment:
+      S_JAVA_OPTS: "-Xmx256m -Xms256m"
+    volumes:
+      - ./config/logstash:/logstash/conf
+    ports:
+      - '19200:9600'
+    networks:
+      - devenv_network
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  kibana:
+    image: kibana:7.16.2
+    container_name: kibana
+    # restart: always
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ports:
+      - '19300:5601'
+    networks:
+      - devenv_network
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 2G
+
+networks:
+  devenv_network:
+    driver: bridge
+
+volumes:
+  devenv-java-workspace:
+  devenv-m2:
+  devenv-redis-data:
+  devenv-postgresql-data:
+  devenv-mongo-data:
+  devenv-elasticsearch-data:
+
+    # openldap:
+    #     image: docker.io/bitnami/openldap:2.6
+    #     container_name: openldap
+    #     ports:
+    #         - '8002:1389'
+    #         - '8003:1636'
+    #     environment:
+    #         - LDAP_ADMIN_USERNAME=devel
+    #         - LDAP_ADMIN_PASSWORD=devel
+    #         - LDAP_USERS=devel01,devel02
+    #         - LDAP_PASSWORDS=devel01,devel02
+    #     volumes:
+    #         - ~/.devel/ldap/openldap_data:/bitnami/openldap
+    #     networks:
+    #         - devenv_network
+
+    # https://www.vinsguru.com/grpc-load-balancing-with-nginx/
+    # nginx:
+    #   image: nginx:1.15-alpine
+    #   depends_on:
+    #     - grpc-server1
+    #     - grpc-server2    
+    #   volumes:
+    #     - ./nginx-conf/conf:/etc/nginx/conf.d
+    #   ports:
+    #     - 6565:6565
+
+  #   pgadmin:
+  # image: dpage/pgadmin4:latest
+  # container_name: pgadmin
+  # environment:
+  #   - PGADMIN_DEFAULT_EMAIL=devel@devel.es
+  #   - PGADMIN_DEFAULT_PASSWORD=devel
+  # ports:
+  #   - 13200:80
+  # networks:
+  #   - devenv_network
+  # deploy:
+  #   resources:
+  #     limits:
+  #       cpus: '0.50'
+  #       memory: 256M
+
+    # mongo-express:
+    # image: mongo-express
+    # container_name: mongo-express
+    # environment:
+    #   - ME_CONFIG_MONGODB_ADMINUSERNAME=rootuser
+    #   - ME_CONFIG_MONGODB_ADMINPASSWORD=rootpass
+    #   - ME_CONFIG_MONGODB_SERVER=mongodb
+    # ports:
+    #   - 12200:8081
+    # networks:
+    #   - devenv_network
