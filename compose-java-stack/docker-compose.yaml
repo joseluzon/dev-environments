@@ -18,6 +18,23 @@ services:
           cpus: '2'
           memory: 4G
 
+  devenv-java_macOS:
+    image: joseluzon/amazon-corretto_jdk17_macOS
+    container_name: dev-java
+    volumes:
+      - devenv-java-workspace:/workspace/
+      - devenv-m2:/root/.m2
+    ports:
+      - 11100:11100
+    networks:
+      - devenv_network
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
   mongodb:
     image: mongo
     container_name: mongodb

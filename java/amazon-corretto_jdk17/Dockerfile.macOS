@@ -1,5 +1,5 @@
 ARG VARIANT=latest
-FROM joseluzon/ubuntu-base:${VARIANT}
+FROM joseluzon/ubuntu-base_mac:${VARIANT}
 
 ARG AMAZON_CORRETTO_JDK17=https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.tar.gz
 ARG MAVEN_VERSION=3.9.4
