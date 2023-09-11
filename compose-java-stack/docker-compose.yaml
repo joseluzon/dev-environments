@@ -33,7 +33,7 @@ services:
       resources:
         limits:
           cpus: '2'
-          memory: 4G
+          memory: 8G
 
   devenv-vaddin_macOS:
     image: joseluzon/vaadin_mac
@@ -50,8 +50,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 4G
+          cpus: '1'
+          memory: 8G
 
   mongodb:
     image: mongo
