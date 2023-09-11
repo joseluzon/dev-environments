@@ -35,6 +35,24 @@ services:
           cpus: '2'
           memory: 4G
 
+  devenv-vaddin_macOS:
+    image: joseluzon/vaadin_mac
+    container_name: dev-vaadin_mac
+    volumes:
+      - devenv-java-workspace:/workspace/
+      - devenv-m2:/root/.m2
+      - devenv-gradle:/root/.gradle
+    ports:
+      - 11100:11100
+    networks:
+      - devenv_network
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
   mongodb:
     image: mongo
     container_name: mongodb
@@ -254,6 +272,7 @@ networks:
 volumes:
   devenv-java-workspace:
   devenv-m2:
+  devenv-gradle:
   devenv-redis-data:
   devenv-postgresql-data:
   devenv-mongo-data:

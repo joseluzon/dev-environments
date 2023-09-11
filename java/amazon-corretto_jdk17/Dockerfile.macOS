@@ -1,7 +1,7 @@
 ARG VARIANT=latest
 FROM joseluzon/ubuntu-base_mac:${VARIANT}
 
-ARG AMAZON_CORRETTO_JDK17=https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.tar.gz
+ARG AMAZON_CORRETTO_JDK17=https://corretto.aws/downloads/latest/amazon-corretto-17-aarch64-linux-jdk.tar.gz
 ARG MAVEN_VERSION=3.9.4
 ARG MAVEN_PACKAGE=https://downloads.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz
 ARG GRADLE_VERSION=8.3
